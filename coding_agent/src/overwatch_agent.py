@@ -326,9 +326,21 @@ class OverwatchAgent:
                         if len(next_executable) > 3:
                             print(f"   ... and {len(next_executable) - 3} more tasks")
                     
-                    # Pause for user control
+                    # Pause for user control with timeout
                     print("\n" + "-"*60)
-                    input("Press Enter to continue to the next task...")
+                    print("⏱️  Auto-proceeding in 10 seconds...")
+                    print("💡 Press Enter to continue now, or 'c' to cancel execution")
+                    
+                    user_input = self._wait_for_user_input_with_timeout(timeout_seconds=10)
+                    
+                    if user_input == 'cancel':
+                        print("❌ Execution cancelled by user.")
+                        return False
+                    elif user_input == 'timeout':
+                        print("⏰ Auto-proceeding to next task...")
+                    else:
+                        print("✅ Continuing to next task...")
+                    
                     print("-"*60)
                     
                 else:
@@ -518,6 +530,60 @@ class OverwatchAgent:
         print("\n" + "="*70)
         print("🎉 Your application is ready to use!")
         print("="*70)
+    
+    def _wait_for_user_input_with_timeout(self, timeout_seconds: int = 10) -> str:
+        """
+        Wait for user input with a timeout.
+        
+        Args:
+            timeout_seconds: Number of seconds to wait before timing out
+            
+        Returns:
+            str: 'continue', 'cancel', or 'timeout'
+        """
+        import threading
+        import sys
+        
+        print(f"⏳ Waiting for input (timeout: {timeout_seconds}s)...")
+        
+        user_input = None
+        input_received = threading.Event()
+        
+        def get_input():
+            nonlocal user_input
+            try:
+                user_input = input().strip().lower()
+                input_received.set()
+            except (EOFError, KeyboardInterrupt):
+                # Handle non-interactive environments or Ctrl+C
+                input_received.set()
+        
+        # Start input thread
+        input_thread = threading.Thread(target=get_input, daemon=True)
+        input_thread.start()
+        
+        # Show countdown if timeout is longer than 3 seconds
+        if timeout_seconds > 3:
+            import time
+            for i in range(timeout_seconds, 0, -1):
+                if input_received.is_set():
+                    break
+                if i <= 3:  # Only show last 3 seconds
+                    print(f"⏰ {i}...", end=' ', flush=True)
+                time.sleep(1)
+            if not input_received.is_set():
+                print()  # New line after countdown
+        
+        # Wait for either input or timeout
+        if input_received.wait(0.1):  # Small additional wait to catch any last input
+            # Input was received
+            if user_input in ['c', 'cancel']:
+                return 'cancel'
+            else:
+                return 'continue'
+        else:
+            # Timeout occurred
+            return 'timeout'
         
     async def start_project(self, use_voice: bool = True) -> bool:
         """

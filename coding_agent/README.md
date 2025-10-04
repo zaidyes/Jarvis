@@ -8,7 +8,7 @@ An intelligent coding agent that can understand high-level software development 
 - **Request Confirmation**: Verify what Jarvis heard before proceeding
 - **Intelligent Planning**: AI-powered project breakdown into manageable tasks
 - **Human Approval**: Review and approve generated plans before execution
-- **Step-by-Step Execution**: Execute tasks with pause between each completion
+- **Step-by-Step Execution**: Execute tasks with auto-proceed timeout (10 seconds)
 - **Real-time Feedback**: See agent thoughts, tool calls, and results in real-time
 - **Dependency Management**: Automatic task dependency resolution
 - **Progress Tracking**: Monitor completion status and upcoming tasks
@@ -150,7 +150,8 @@ python3 run.py
      - Final output from the AI
      - Progress status
      - Next upcoming tasks
-   - Press `Enter` to continue to the next task
+   - **Auto-proceed**: Press Enter to continue immediately, or wait 10 seconds for auto-proceed
+   - **Cancel**: Type 'c' or 'cancel' to stop execution
 
 6. **Monitor Progress**
    - Watch real-time agent thoughts and tool calls
