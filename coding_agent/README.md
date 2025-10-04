@@ -6,6 +6,7 @@ An intelligent coding agent that can understand high-level software development 
 
 - **Voice Input**: Speak your project goals naturally using voice commands
 - **Request Confirmation**: Verify what Jarvis heard before proceeding
+- **Model Selection**: Choose from 30+ available Google AI models (Gemini 2.5 Pro, Flash, etc.)
 - **Intelligent Planning**: AI-powered project breakdown into manageable tasks
 - **Human Approval**: Review and approve generated plans before execution
 - **Step-by-Step Execution**: Execute tasks with configurable auto-proceed timeout (default: 3 seconds)
@@ -127,7 +128,18 @@ python3 run.py
    - Example: "Create a Flask web application with user authentication"
    - If voice input fails, you'll be prompted to type your request
 
-3. **Confirm Your Request**
+3. **Select AI Model** (NEW!)
+   - Jarvis will show you 30+ available Google AI models
+   - Choose from models like:
+     - Gemini 2.5 Pro (most capable)
+     - Gemini 2.5 Flash (fast and efficient)
+     - Gemini 2.0 Flash (latest features)
+     - Gemma 3 models (specialized)
+   - Enter a number (1-38) to select a model
+   - Enter 'current' to keep the default model
+   - Enter 'cancel' to use default model
+
+4. **Confirm Your Request**
    - Jarvis will repeat what it heard/read
    - Review the request and choose:
      - Type `y` or `yes` to proceed
@@ -135,7 +147,7 @@ python3 run.py
      - Type `c` or `cancel` to exit
    - This prevents misunderstandings and gives you control
 
-4. **Review Generated Plan**
+5. **Review Generated Plan**
    - The AI will analyze your request and create a structured plan
    - Review the plan details including:
      - Project description
@@ -144,7 +156,7 @@ python3 run.py
      - Estimated timeline
    - Approve by typing `y` or reject with `n`
 
-5. **Execute Tasks**
+6. **Execute Tasks**
    - Tasks will execute one by one in dependency order
    - After each task completion, you'll see:
      - Task summary

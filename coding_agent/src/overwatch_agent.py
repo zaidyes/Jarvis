@@ -21,6 +21,7 @@ from google.genai.types import Content, Part
 from agents.planner_agent import planner_agent
 from agents.executor_agent import executor_agent
 from tools.voice_input import get_voice_command
+from tools.model_selection import get_available_models, display_available_models, select_model_interactive, get_model_info
 
 
 class OverwatchAgent:
@@ -44,6 +45,7 @@ class OverwatchAgent:
         self.app_name = app_name
         self.user_id = user_id
         self.task_timeout_seconds = task_timeout_seconds
+        self.selected_model: Optional[str] = None  # User-selected model
         self.plan: Optional[Dict[str, Any]] = None
         self.completed_tasks: List[str] = []
         self.session_id: Optional[str] = None
@@ -106,6 +108,50 @@ class OverwatchAgent:
             else:
                 print("⚠️  Invalid choice. Please enter 'y' (yes), 'n' (no), or 'c' (cancel).")
                 continue
+        
+    def select_model(self) -> bool:
+        """
+        Allow user to select a Google AI model for the project.
+        
+        Returns:
+            True if model was selected successfully, False if cancelled
+        """
+        print("\n" + "="*60)
+        print("🤖 MODEL SELECTION")
+        print("="*60)
+        
+        # Get available models
+        print("🔍 Fetching available Google AI models...")
+        models = get_available_models()
+        
+        if not models:
+            print("❌ No models available. Using default model.")
+            return False
+        
+        # Show current model if any
+        current_model = self.selected_model or "gemini-2.5-flash"  # Default
+        print(f"🎯 Current model: {current_model}")
+        
+        # Allow user to select
+        selected_model = select_model_interactive(models, current_model)
+        
+        if selected_model:
+            self.selected_model = selected_model
+            print(f"\n✅ Model selected: {selected_model}")
+            
+            # Show model details
+            model_info = get_model_info(selected_model)
+            if model_info:
+                print(f"📝 Display Name: {model_info['display_name']}")
+                print(f"📄 Description: {model_info['description']}")
+                print(f"🔢 Version: {model_info['version']}")
+                print(f"📥 Input Tokens: {model_info['input_token_limit']}")
+                print(f"📤 Output Tokens: {model_info['output_token_limit']}")
+            
+            return True
+        else:
+            print("❌ Model selection cancelled or failed")
+            return False
         
     async def generate_and_review_plan(self, user_request: str) -> bool:
         """
@@ -689,8 +735,20 @@ class OverwatchAgent:
             # Initialize services
             await self.initialize()
             
-            # Step 1: Get project goal from user
-            print("\n📋 Step 1: Getting Project Goal")
+            # Step 1: Model Selection
+            print("\n🤖 Step 1: Model Selection")
+            print("-" * 40)
+            model_selected = self.select_model()
+            
+            if not model_selected:
+                print("⚠️  Using default model: gemini-2.5-flash")
+                self.selected_model = "gemini-2.5-flash"
+            
+            # Re-initialize with selected model
+            await self.initialize()
+            
+            # Step 2: Get project goal from user
+            print("\n📋 Step 2: Getting Project Goal")
             print("-" * 40)
             user_request = self.get_project_goal(use_voice=use_voice)
             
@@ -705,8 +763,8 @@ class OverwatchAgent:
             # Start session
             await self.start_session(user_request)
             
-            # Step 2: Generate and review plan
-            print("\n🧠 Step 2: Generating and Reviewing Plan")
+            # Step 3: Generate and review plan
+            print("\n🧠 Step 3: Generating and Reviewing Plan")
             print("-" * 40)
             plan_approved = await self.generate_and_review_plan(user_request)
             
@@ -714,8 +772,8 @@ class OverwatchAgent:
                 print("❌ Plan not approved or failed to generate.")
                 return False
             
-            # Step 3: Execute the approved plan
-            print("\n🚀 Step 3: Executing Plan")
+            # Step 4: Execute the approved plan
+            print("\n🚀 Step 4: Executing Plan")
             print("-" * 40)
             success = await self.execute_plan()
             
@@ -738,6 +796,118 @@ class OverwatchAgent:
         print("🔧 Initializing Overwatch Agent services...")
         
         self.session_service = InMemorySessionService()
+        
+        # Create agents with selected model (or default)
+        model = self.selected_model or "gemini-2.5-flash"
+        print(f"🤖 Using model: {model}")
+        
+        # Create planner agent with selected model
+        from agents.planner_agent import Plan
+        from google.adk.agents import LlmAgent
+        
+        planner_agent = LlmAgent(
+            name="planner_agent",
+            description="Expert software architect that breaks down high-level requests into structured project plans",
+            instruction="""
+            You are an expert software architect with 15+ years of experience in designing and planning software projects.
+            
+            Your role is to break down high-level software development requests into detailed, actionable project plans.
+            
+            When given a software development request, you should:
+            1. Analyze the requirements and identify the core components needed
+            2. Break down the project into logical, sequential tasks
+            3. Identify dependencies between tasks to ensure proper execution order
+            4. Estimate realistic time requirements for each task
+            5. Categorize tasks by type (setup, backend, frontend, testing, deployment, etc.)
+            6. Assign appropriate priority levels based on project criticality
+            7. Suggest appropriate technology stacks when not specified
+            8. Ensure the plan is comprehensive yet achievable
+            
+            Always structure your response as a complete project plan with:
+            - Clear project identification and description
+            - Detailed tasks with unique IDs and dependencies
+            - Realistic time estimates
+            - Proper task categorization and prioritization
+            - Technology recommendations when appropriate
+            
+            Focus on creating plans that are:
+            - Technically sound and industry-standard
+            - Properly sequenced with clear dependencies
+            - Realistic in scope and timeline
+            - Comprehensive yet not overwhelming
+            - Ready for immediate implementation
+            
+            Your expertise spans web applications, APIs, mobile apps, desktop applications, 
+            microservices, databases, cloud deployment, and modern development practices.
+            """,
+            model=model,
+            output_schema=Plan
+        )
+        
+        # Create executor agent with selected model
+        from src.tools.file_system_tools import read_file, write_file, list_files
+        
+        executor_agent = LlmAgent(
+            name="executor_agent",
+            description="Expert Python software engineer that executes individual tasks using available tools",
+            instruction="""
+            You are an expert Python software engineer with 10+ years of experience in developing
+            high-quality software applications across various domains.
+            
+            Your role is to execute individual tasks from a software development project plan.
+            You will receive a single task with its description, dependencies, and context,
+            and you must implement the required functionality using the available tools.
+            
+            When executing a task, you should:
+            1. Analyze the task description and understand the requirements
+            2. Check the current state of the project using list_files() to understand the structure
+            3. Read existing files using read_file() to understand the current codebase
+            4. Implement the required functionality by writing or modifying files using write_file()
+            5. Ensure code quality, proper structure, and adherence to best practices
+            6. Handle errors gracefully and provide meaningful feedback
+            7. Follow Python coding standards and conventions
+            8. Create clean, maintainable, and well-documented code
+            
+            Key principles for task execution:
+            - Always understand the existing codebase before making changes
+            - Write clean, readable, and well-documented code
+            - Follow Python best practices and PEP 8 guidelines
+            - Implement proper error handling and validation
+            - Create modular, reusable components when appropriate
+            - Ensure backward compatibility when modifying existing code
+            - Test your implementations thoroughly
+            - Use appropriate design patterns and architectural principles
+            
+            Available tools:
+            - read_file(path): Read content from a file in the output/ directory
+            - write_file(path, content): Write content to a file, creating directories as needed
+            - list_files(path): List files and directories in the output/ directory
+            
+            Always use these tools to interact with the file system. Never assume file contents
+            or directory structure without first checking with the appropriate tool.
+            
+            When implementing features:
+            - Start with a clear understanding of the requirements
+            - Plan the implementation approach
+            - Write code incrementally, testing as you go
+            - Ensure all necessary imports and dependencies are included
+            - Create proper file structure and organization
+            - Add appropriate comments and documentation
+            
+            Your expertise includes:
+            - Python development (all versions)
+            - Web frameworks (Django, Flask, FastAPI)
+            - API development and integration
+            - Database design and ORM usage
+            - Testing frameworks (pytest, unittest)
+            - Code organization and architecture
+            - Error handling and logging
+            - Performance optimization
+            - Security best practices
+            """,
+            model=model,
+            tools=[read_file, write_file, list_files]
+        )
         
         # Create runner for planner agent
         self.runner = Runner(
