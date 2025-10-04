@@ -48,6 +48,7 @@ class OverwatchAgent:
         self.completed_tasks: List[str] = []
         self.session_id: Optional[str] = None
         self.runner: Optional[Runner] = None
+        self.executor_runner: Optional[Runner] = None
         self.session_service: Optional[InMemorySessionService] = None
         
     def get_project_goal(self, use_voice: bool = True) -> str:
@@ -77,8 +78,8 @@ class OverwatchAgent:
             
             if not user_request:
                 # Fallback to text input
-                user_request = input("Please enter your software development request: ")
-            
+            user_request = input("Please enter your software development request: ")
+        
             # Confirmation step
             print("\n" + "="*60)
             print("📋 REQUEST CONFIRMATION")
@@ -208,9 +209,9 @@ class OverwatchAgent:
                     else:
                         print("❌ Plan not approved. Exiting...")
                         return False
-                else:
-                    print("❌ No project plan found in session state.")
-                    print("🔍 Checking raw session state...")
+            else:
+                print("❌ No project plan found in session state.")
+                print("🔍 Checking raw session state...")
                     print(f"Session state keys: {list(updated_session.state.keys())}")
                     return False
                 
@@ -233,73 +234,73 @@ class OverwatchAgent:
             return False
             
         tasks = self.plan.get('tasks', [])
-        if not tasks:
-            print("❌ No tasks to execute.")
+    if not tasks:
+        print("❌ No tasks to execute.")
             return False
-        
+    
         self.completed_tasks = []
-        total_tasks = len(tasks)
-        execution_round = 0
-        
-        print(f"\n🎯 Starting execution of {total_tasks} tasks...")
-        print("=" * 60)
-        
+    total_tasks = len(tasks)
+    execution_round = 0
+    
+    print(f"\n🎯 Starting execution of {total_tasks} tasks...")
+    print("=" * 60)
+    
         while len(self.completed_tasks) < total_tasks:
-            execution_round += 1
-            print(f"\n🔄 Execution Round {execution_round}")
-            print("-" * 30)
-            
-            # Find tasks that can be executed (dependencies met)
+        execution_round += 1
+        print(f"\n🔄 Execution Round {execution_round}")
+        print("-" * 30)
+        
+        # Find tasks that can be executed (dependencies met)
             executable_tasks = self.find_executable_tasks(tasks)
-            
-            if not executable_tasks:
-                # Check for circular dependencies
+        
+        if not executable_tasks:
+            # Check for circular dependencies
                 remaining_tasks = [task for task in tasks if task.get('task_id') not in self.completed_tasks]
-                if remaining_tasks:
-                    print("❌ Circular dependency detected!")
-                    print("🔍 Remaining tasks that cannot be executed:")
-                    for task in remaining_tasks:
-                        task_id = task.get('task_id', 'Unknown')
-                        dependencies = task.get('dependencies', [])
+            if remaining_tasks:
+                print("❌ Circular dependency detected!")
+                print("🔍 Remaining tasks that cannot be executed:")
+                for task in remaining_tasks:
+                    task_id = task.get('task_id', 'Unknown')
+                    dependencies = task.get('dependencies', [])
                         missing_deps = [dep for dep in dependencies if dep not in self.completed_tasks]
-                        print(f"   - {task_id}: Missing dependencies: {missing_deps}")
-                    print("\n💡 Please review the task dependencies and fix circular references.")
+                    print(f"   - {task_id}: Missing dependencies: {missing_deps}")
+                print("\n💡 Please review the task dependencies and fix circular references.")
                     return False
-                else:
-                    break
-            
-            # Execute the first available task
-            current_task = executable_tasks[0]
-            task_id = current_task.get('task_id', 'Unknown')
+            else:
+                break
+        
+        # Execute the first available task
+        current_task = executable_tasks[0]
+        task_id = current_task.get('task_id', 'Unknown')
             
             # Display progress bar
             self._display_progress_bar(len(self.completed_tasks), total_tasks, task_id)
-            
-            print(f"🚀 Executing task: {task_id}")
-            print(f"📝 Description: {current_task.get('description', 'No description')}")
-            
-            try:
-                # Update session state with current task
+        
+        print(f"🚀 Executing task: {task_id}")
+        print(f"📝 Description: {current_task.get('description', 'No description')}")
+        
+        try:
+            # Update session state with current task
                 await self.update_session_state({
                     "current_task": current_task,
                     "status": "executing"
                 })
-                
-                # Execute the task using the executor agent
+            
+            # Execute the task using the executor agent
                 success, final_output = await self.execute_single_task(current_task)
                 
                 if success:
-                    # Mark task as completed
+            # Mark task as completed
                     self.completed_tasks.append(task_id)
-                    
-                    # Update session state
+            
+            # Update session state
                     await self.update_session_state({
                         "completed_tasks": self.completed_tasks.copy(),
                         "current_task": None
                     })
                     
                     # Print task completion summary
-                    print(f"\n✅ Task {task_id} completed successfully!")
+            print(f"\n✅ Task {task_id} completed successfully!")
                     print(f"📊 Progress: {len(self.completed_tasks)}/{total_tasks} tasks completed")
                     
                     # Display task summary and pause for user control
@@ -363,12 +364,12 @@ class OverwatchAgent:
                     print("   Options could include: retry, skip, abort, or modify the task.")
                     
                     return False
-                    
-            except Exception as e:
-                print(f"❌ Error executing task {task_id}: {str(e)}")
-                print(f"Error type: {type(e).__name__}")
-                import traceback
-                traceback.print_exc()
+            
+        except Exception as e:
+            print(f"❌ Error executing task {task_id}: {str(e)}")
+            print(f"Error type: {type(e).__name__}")
+            import traceback
+            traceback.print_exc()
                 return False
         
         print(f"\n🎉 All tasks completed successfully!")
@@ -676,8 +677,8 @@ class OverwatchAgent:
         1. Get project goal from user
         2. Generate and review plan (with human approval)
         3. Execute the approved plan
-        
-        Args:
+    
+    Args:
             use_voice: Whether to attempt voice input first
             
         Returns:
@@ -739,9 +740,18 @@ class OverwatchAgent:
         print("🔧 Initializing Overwatch Agent services...")
         
         self.session_service = InMemorySessionService()
+        
+        # Create runner for planner agent
         self.runner = Runner(
             app_name=self.app_name,
-            agent=planner_agent,  # Use planner as the root agent
+            agent=planner_agent,
+            session_service=self.session_service
+        )
+        
+        # Create runner for executor agent
+        self.executor_runner = Runner(
+            app_name=self.app_name,
+            agent=executor_agent,
             session_service=self.session_service
         )
         
@@ -753,8 +763,8 @@ class OverwatchAgent:
         
         Args:
             user_request: The user's software development request
-            
-        Returns:
+        
+    Returns:
             Session ID of the created session
         """
         print(f"\n📋 Starting new session for request: '{user_request}'")
@@ -790,8 +800,8 @@ class OverwatchAgent:
     async def execute_single_task(self, task: Dict[str, Any]) -> tuple[bool, str]:
         """
         Execute a single task using the executor agent.
-        
-        Args:
+    
+    Args:
             task: Task dictionary containing task details
             
         Returns:
@@ -813,7 +823,7 @@ class OverwatchAgent:
             events = []
             final_output = ""
             
-            async for event in self.runner.run_async(
+            async for event in self.executor_runner.run_async(
                 user_id=self.user_id,
                 session_id=self.session_id,
                 new_message=task_content
@@ -859,9 +869,9 @@ class OverwatchAgent:
                 # Fallback for events without type attribute
                 print(f"📄 Event: {event}")
                 
-        except Exception as e:
-            print(f"⚠️  Error processing events: {str(e)}")
-            
+    except Exception as e:
+        print(f"⚠️  Error processing events: {str(e)}")
+
     def find_executable_tasks(self, tasks: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """
         Find tasks that can be executed (all dependencies are met).
@@ -909,58 +919,58 @@ class OverwatchAgent:
             session.state.update(state_delta)
             
     def display_project_plan(self, plan: Dict[str, Any]):
-        """
-        Display a formatted version of the project plan.
-        
-        Args:
-            plan: The project plan dictionary containing project details and tasks.
-        """
-        try:
+    """
+    Display a formatted version of the project plan.
+    
+    Args:
+        plan: The project plan dictionary containing project details and tasks.
+    """
+    try:
             print("\n" + "="*60)
             print("📋 PROJECT PLAN")
             print("="*60)
             
-            # Display project information
-            print(f"📝 Project: {plan.get('project_name', 'Unnamed Project')}")
-            print(f"📄 Description: {plan.get('description', 'No description provided')}")
+        # Display project information
+        print(f"📝 Project: {plan.get('project_name', 'Unnamed Project')}")
+        print(f"📄 Description: {plan.get('description', 'No description provided')}")
+        
+        if plan.get('project_type'):
+            print(f"🏗️  Type: {plan['project_type']}")
+        
+        if plan.get('tech_stack'):
+            print(f"🛠️  Tech Stack: {', '.join(plan['tech_stack'])}")
+        
+        if plan.get('total_estimated_hours'):
+            print(f"⏱️  Estimated Hours: {plan['total_estimated_hours']}")
+        
+        # Display tasks
+        tasks = plan.get('tasks', [])
+        if tasks:
+            print(f"\n📋 Tasks ({len(tasks)} total):")
+            print("-" * 40)
             
-            if plan.get('project_type'):
-                print(f"🏗️  Type: {plan['project_type']}")
-            
-            if plan.get('tech_stack'):
-                print(f"🛠️  Tech Stack: {', '.join(plan['tech_stack'])}")
-            
-            if plan.get('total_estimated_hours'):
-                print(f"⏱️  Estimated Hours: {plan['total_estimated_hours']}")
-            
-            # Display tasks
-            tasks = plan.get('tasks', [])
-            if tasks:
-                print(f"\n📋 Tasks ({len(tasks)} total):")
-                print("-" * 40)
+            for i, task in enumerate(tasks, 1):
+                print(f"\n{i}. {task.get('task_id', f'Task {i}')}")
+                print(f"   📝 {task.get('description', 'No description')}")
                 
-                for i, task in enumerate(tasks, 1):
-                    print(f"\n{i}. {task.get('task_id', f'Task {i}')}")
-                    print(f"   📝 {task.get('description', 'No description')}")
-                    
-                    if task.get('category'):
-                        print(f"   🏷️  Category: {task['category']}")
-                    
-                    if task.get('priority'):
-                        print(f"   ⚡ Priority: {task['priority']}")
-                    
-                    if task.get('estimated_hours'):
-                        print(f"   ⏱️  Hours: {task['estimated_hours']}")
-                    
-                    if task.get('dependencies'):
-                        print(f"   🔗 Dependencies: {', '.join(task['dependencies'])}")
-            else:
-                print("\n❌ No tasks found in the plan.")
+                if task.get('category'):
+                    print(f"   🏷️  Category: {task['category']}")
                 
-        except Exception as e:
-            print(f"❌ Error displaying project plan: {str(e)}")
-            print("📄 Raw plan data:")
-            print(json.dumps(plan, indent=2))
+                if task.get('priority'):
+                    print(f"   ⚡ Priority: {task['priority']}")
+                
+                if task.get('estimated_hours'):
+                    print(f"   ⏱️  Hours: {task['estimated_hours']}")
+                
+                if task.get('dependencies'):
+                    print(f"   🔗 Dependencies: {', '.join(task['dependencies'])}")
+        else:
+            print("\n❌ No tasks found in the plan.")
+            
+    except Exception as e:
+        print(f"❌ Error displaying project plan: {str(e)}")
+        print("📄 Raw plan data:")
+        print(json.dumps(plan, indent=2))
             
     async def run_complete_workflow(self, user_request: Optional[str] = None, use_voice: bool = True) -> bool:
         """
