@@ -541,10 +541,53 @@ class OverwatchAgent:
         Returns:
             str: 'continue', 'cancel', or 'timeout'
         """
-        import threading
         import sys
+        import time
         
         print(f"⏳ Waiting for input (timeout: {timeout_seconds}s)...")
+        
+        # Try to use select for Unix-like systems
+        try:
+            import select
+            
+            if hasattr(select, 'select') and sys.stdin.isatty():
+                # Use select for real-time input detection
+                start_time = time.time()
+                
+                last_countdown = 0
+                while time.time() - start_time < timeout_seconds:
+                    # Check if input is available
+                    ready, _, _ = select.select([sys.stdin], [], [], 0.1)
+                    
+                    if ready:
+                        # Input is available
+                        try:
+                            user_input = input().strip().lower()
+                            if user_input in ['c', 'cancel']:
+                                return 'cancel'
+                            else:
+                                return 'continue'
+                        except (EOFError, KeyboardInterrupt):
+                            return 'continue'
+                    
+                    # Show countdown for last 3 seconds (only once per second)
+                    remaining = timeout_seconds - (time.time() - start_time)
+                    if remaining <= 3 and remaining > 0 and int(remaining) != last_countdown:
+                        print(f"⏰ {int(remaining)}...", end=' ', flush=True)
+                        last_countdown = int(remaining)
+                
+                print()  # New line after countdown
+                return 'timeout'
+                
+        except (ImportError, OSError, ValueError):
+            # Fallback for systems where select doesn't work
+            pass
+        
+        # Fallback: Simple timeout without real-time detection
+        print("⚠️  Using fallback timeout (no real-time input detection)")
+        
+        # Use threading as fallback
+        import threading
         
         user_input = None
         input_received = threading.Event()
@@ -555,34 +598,39 @@ class OverwatchAgent:
                 user_input = input().strip().lower()
                 input_received.set()
             except (EOFError, KeyboardInterrupt):
-                # Handle non-interactive environments or Ctrl+C
-                input_received.set()
+                # Don't set the event for EOF - let it timeout naturally
+                pass
         
         # Start input thread
         input_thread = threading.Thread(target=get_input, daemon=True)
         input_thread.start()
         
-        # Show countdown if timeout is longer than 3 seconds
-        if timeout_seconds > 3:
-            import time
-            for i in range(timeout_seconds, 0, -1):
-                if input_received.is_set():
-                    break
-                if i <= 3:  # Only show last 3 seconds
-                    print(f"⏰ {i}...", end=' ', flush=True)
-                time.sleep(1)
-            if not input_received.is_set():
-                print()  # New line after countdown
+        # Wait with countdown
+        start_time = time.time()
+        last_countdown = 0
         
-        # Wait for either input or timeout
-        if input_received.wait(0.1):  # Small additional wait to catch any last input
-            # Input was received
+        while time.time() - start_time < timeout_seconds:
+            if input_received.is_set():
+                break
+            
+            # Show countdown for last 3 seconds (only once per second)
+            remaining = timeout_seconds - (time.time() - start_time)
+            if remaining <= 3 and remaining > 0 and int(remaining) != last_countdown:
+                print(f"⏰ {int(remaining)}...", end=' ', flush=True)
+                last_countdown = int(remaining)
+            
+            time.sleep(0.1)
+        
+        if not input_received.is_set():
+            print()
+        
+        # Check if we got input
+        if input_received.is_set():
             if user_input in ['c', 'cancel']:
                 return 'cancel'
             else:
                 return 'continue'
         else:
-            # Timeout occurred
             return 'timeout'
         
     async def start_project(self, use_voice: bool = True) -> bool:
