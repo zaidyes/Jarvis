@@ -32,16 +32,18 @@ class OverwatchAgent:
     error handling.
     """
     
-    def __init__(self, app_name: str = "overwatch_agent_app", user_id: str = "default_user"):
+    def __init__(self, app_name: str = "overwatch_agent_app", user_id: str = "default_user", task_timeout_seconds: int = 3):
         """
         Initialize the Overwatch Agent.
         
         Args:
             app_name: Name of the application for session management
             user_id: User ID for session management
+            task_timeout_seconds: Timeout in seconds for task execution pauses (default: 3)
         """
         self.app_name = app_name
         self.user_id = user_id
+        self.task_timeout_seconds = task_timeout_seconds
         self.plan: Optional[Dict[str, Any]] = None
         self.completed_tasks: List[str] = []
         self.session_id: Optional[str] = None
@@ -270,6 +272,9 @@ class OverwatchAgent:
             current_task = executable_tasks[0]
             task_id = current_task.get('task_id', 'Unknown')
             
+            # Display progress bar
+            self._display_progress_bar(len(self.completed_tasks), total_tasks, task_id)
+            
             print(f"🚀 Executing task: {task_id}")
             print(f"📝 Description: {current_task.get('description', 'No description')}")
             
@@ -328,10 +333,10 @@ class OverwatchAgent:
                     
                     # Pause for user control with timeout
                     print("\n" + "-"*60)
-                    print("⏱️  Auto-proceeding in 10 seconds...")
+                    print(f"⏱️  Auto-proceeding in {self.task_timeout_seconds} seconds...")
                     print("💡 Press Enter to continue now, or 'c' to cancel execution")
                     
-                    user_input = self._wait_for_user_input_with_timeout(timeout_seconds=10)
+                    user_input = self._wait_for_user_input_with_timeout(timeout_seconds=self.task_timeout_seconds)
                     
                     if user_input == 'cancel':
                         print("❌ Execution cancelled by user.")
@@ -367,6 +372,10 @@ class OverwatchAgent:
                 return False
         
         print(f"\n🎉 All tasks completed successfully!")
+        
+        # Display final progress bar
+        self._display_progress_bar(len(self.completed_tasks), total_tasks)
+        
         print(f"📊 Final progress: {len(self.completed_tasks)}/{total_tasks} tasks completed")
         
         # Provide instructions on how to access and run the generated application
@@ -531,7 +540,33 @@ class OverwatchAgent:
         print("🎉 Your application is ready to use!")
         print("="*70)
     
-    def _wait_for_user_input_with_timeout(self, timeout_seconds: int = 10) -> str:
+    def _display_progress_bar(self, completed: int, total: int, task_name: str = ""):
+        """
+        Display a progress bar for task completion.
+        
+        Args:
+            completed: Number of completed tasks
+            total: Total number of tasks
+            task_name: Name of the current task (optional)
+        """
+        if total == 0:
+            return
+        
+        # Calculate percentage
+        percentage = (completed / total) * 100
+        
+        # Create progress bar (20 characters wide)
+        bar_width = 20
+        filled_width = int((completed / total) * bar_width)
+        bar = "█" * filled_width + "░" * (bar_width - filled_width)
+        
+        # Display progress bar
+        print(f"\n📊 Progress: [{bar}] {completed}/{total} ({percentage:.1f}%)")
+        
+        if task_name:
+            print(f"🎯 Current Task: {task_name}")
+    
+    def _wait_for_user_input_with_timeout(self, timeout_seconds: int = 3) -> str:
         """
         Wait for user input with a timeout.
         

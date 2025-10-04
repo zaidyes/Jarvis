@@ -25,7 +25,8 @@ async def main():
         # Create an instance of the OverwatchAgent
         agent = OverwatchAgent(
             app_name="overwatch_coding_agent",
-            user_id="user"
+            user_id="user",
+            task_timeout_seconds=3  # Configurable: 3 seconds timeout between tasks
         )
         
         # Start the project workflow

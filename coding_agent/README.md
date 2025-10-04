@@ -8,7 +8,8 @@ An intelligent coding agent that can understand high-level software development 
 - **Request Confirmation**: Verify what Jarvis heard before proceeding
 - **Intelligent Planning**: AI-powered project breakdown into manageable tasks
 - **Human Approval**: Review and approve generated plans before execution
-- **Step-by-Step Execution**: Execute tasks with auto-proceed timeout (10 seconds)
+- **Step-by-Step Execution**: Execute tasks with configurable auto-proceed timeout (default: 3 seconds)
+- **Progress Bar**: Visual progress tracking with task completion percentage
 - **Real-time Feedback**: See agent thoughts, tool calls, and results in real-time
 - **Dependency Management**: Automatic task dependency resolution
 - **Progress Tracking**: Monitor completion status and upcoming tasks
@@ -150,7 +151,8 @@ python3 run.py
      - Final output from the AI
      - Progress status
      - Next upcoming tasks
-   - **Auto-proceed**: Press Enter to continue immediately, or wait 10 seconds for auto-proceed
+   - **Auto-proceed**: Press Enter to continue immediately, or wait 3 seconds for auto-proceed
+   - **Progress Bar**: Visual progress tracking shows completion percentage
    - **Cancel**: Type 'c' or 'cancel' to stop execution
 
 6. **Monitor Progress**
@@ -179,6 +181,23 @@ coding_agent/
 ```
 
 ## 🔧 Configuration
+
+### Configurable Timeout
+You can customize the task execution timeout by modifying the `task_timeout_seconds` parameter:
+
+```python
+# In run.py or when creating OverwatchAgent
+agent = OverwatchAgent(
+    app_name="overwatch_coding_agent",
+    user_id="user",
+    task_timeout_seconds=5  # Change to desired timeout (default: 3 seconds)
+)
+```
+
+**Timeout Options:**
+- `1-2 seconds`: Fast execution, minimal user interaction
+- `3 seconds`: Balanced approach (default)
+- `5-10 seconds`: More time for user review and interaction
 
 ### Customize Agent Behavior
 Edit `src/overwatch_agent.py` to modify:
