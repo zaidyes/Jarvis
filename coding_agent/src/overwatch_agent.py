@@ -285,22 +285,22 @@ class OverwatchAgent:
                     "current_task": current_task,
                     "status": "executing"
                 })
-            
-            # Execute the task using the executor agent
+                
+                # Execute the task using the executor agent
                 success, final_output = await self.execute_single_task(current_task)
                 
                 if success:
-            # Mark task as completed
+                    # Mark task as completed
                     self.completed_tasks.append(task_id)
-            
-            # Update session state
+                    
+                    # Update session state
                     await self.update_session_state({
                         "completed_tasks": self.completed_tasks.copy(),
                         "current_task": None
                     })
                     
                     # Print task completion summary
-            print(f"\n✅ Task {task_id} completed successfully!")
+                    print(f"\n✅ Task {task_id} completed successfully!")
                     print(f"📊 Progress: {len(self.completed_tasks)}/{total_tasks} tasks completed")
                     
                     # Display task summary and pause for user control
@@ -365,11 +365,11 @@ class OverwatchAgent:
                     
                     return False
             
-        except Exception as e:
-            print(f"❌ Error executing task {task_id}: {str(e)}")
-            print(f"Error type: {type(e).__name__}")
-            import traceback
-            traceback.print_exc()
+            except Exception as e:
+                print(f"❌ Error executing task {task_id}: {str(e)}")
+                print(f"Error type: {type(e).__name__}")
+                import traceback
+                traceback.print_exc()
                 return False
         
         print(f"\n🎉 All tasks completed successfully!")
@@ -869,8 +869,8 @@ class OverwatchAgent:
                 # Fallback for events without type attribute
                 print(f"📄 Event: {event}")
                 
-    except Exception as e:
-        print(f"⚠️  Error processing events: {str(e)}")
+        except Exception as e:
+            print(f"⚠️  Error processing events: {str(e)}")
 
     def find_executable_tasks(self, tasks: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """
@@ -919,58 +919,58 @@ class OverwatchAgent:
             session.state.update(state_delta)
             
     def display_project_plan(self, plan: Dict[str, Any]):
-    """
-    Display a formatted version of the project plan.
-    
-    Args:
-        plan: The project plan dictionary containing project details and tasks.
-    """
-    try:
+        """
+        Display a formatted version of the project plan.
+        
+        Args:
+            plan: The project plan dictionary containing project details and tasks.
+        """
+        try:
             print("\n" + "="*60)
             print("📋 PROJECT PLAN")
             print("="*60)
             
-        # Display project information
-        print(f"📝 Project: {plan.get('project_name', 'Unnamed Project')}")
-        print(f"📄 Description: {plan.get('description', 'No description provided')}")
-        
-        if plan.get('project_type'):
-            print(f"🏗️  Type: {plan['project_type']}")
-        
-        if plan.get('tech_stack'):
-            print(f"🛠️  Tech Stack: {', '.join(plan['tech_stack'])}")
-        
-        if plan.get('total_estimated_hours'):
-            print(f"⏱️  Estimated Hours: {plan['total_estimated_hours']}")
-        
-        # Display tasks
-        tasks = plan.get('tasks', [])
-        if tasks:
-            print(f"\n📋 Tasks ({len(tasks)} total):")
-            print("-" * 40)
+            # Display project information
+            print(f"📝 Project: {plan.get('project_name', 'Unnamed Project')}")
+            print(f"📄 Description: {plan.get('description', 'No description provided')}")
             
-            for i, task in enumerate(tasks, 1):
-                print(f"\n{i}. {task.get('task_id', f'Task {i}')}")
-                print(f"   📝 {task.get('description', 'No description')}")
-                
-                if task.get('category'):
-                    print(f"   🏷️  Category: {task['category']}")
-                
-                if task.get('priority'):
-                    print(f"   ⚡ Priority: {task['priority']}")
-                
-                if task.get('estimated_hours'):
-                    print(f"   ⏱️  Hours: {task['estimated_hours']}")
-                
-                if task.get('dependencies'):
-                    print(f"   🔗 Dependencies: {', '.join(task['dependencies'])}")
-        else:
-            print("\n❌ No tasks found in the plan.")
+            if plan.get('project_type'):
+                print(f"🏗️  Type: {plan['project_type']}")
             
-    except Exception as e:
-        print(f"❌ Error displaying project plan: {str(e)}")
-        print("📄 Raw plan data:")
-        print(json.dumps(plan, indent=2))
+            if plan.get('tech_stack'):
+                print(f"🛠️  Tech Stack: {', '.join(plan['tech_stack'])}")
+            
+            if plan.get('total_estimated_hours'):
+                print(f"⏱️  Estimated Hours: {plan['total_estimated_hours']}")
+            
+            # Display tasks
+            tasks = plan.get('tasks', [])
+            if tasks:
+                print(f"\n📋 Tasks ({len(tasks)} total):")
+                print("-" * 40)
+                
+                for i, task in enumerate(tasks, 1):
+                    print(f"\n{i}. {task.get('task_id', f'Task {i}')}")
+                    print(f"   📝 {task.get('description', 'No description')}")
+                    
+                    if task.get('category'):
+                        print(f"   🏷️  Category: {task['category']}")
+                    
+                    if task.get('priority'):
+                        print(f"   ⚡ Priority: {task['priority']}")
+                    
+                    if task.get('estimated_hours'):
+                        print(f"   ⏱️  Hours: {task['estimated_hours']}")
+                    
+                    if task.get('dependencies'):
+                        print(f"   🔗 Dependencies: {', '.join(task['dependencies'])}")
+            else:
+                print("\n❌ No tasks found in the plan.")
+                
+        except Exception as e:
+            print(f"❌ Error displaying project plan: {str(e)}")
+            print("📄 Raw plan data:")
+            print(json.dumps(plan, indent=2))
             
     async def run_complete_workflow(self, user_request: Optional[str] = None, use_voice: bool = True) -> bool:
         """
