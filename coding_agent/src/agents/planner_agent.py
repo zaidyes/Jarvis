@@ -115,6 +115,6 @@ planner_agent = LlmAgent(
     Your expertise spans web applications, APIs, mobile apps, desktop applications, 
     microservices, databases, cloud deployment, and modern development practices.
     """,
-    model="gemini-1.5-pro",
+    model="gemini-2.5-flash",
     output_schema=Plan
 )

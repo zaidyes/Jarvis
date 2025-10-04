@@ -62,3 +62,6 @@ final_verification.py
 
 # Generated project files (optional - remove if you want to keep them)
 generated_project/
+
+# Jarvis output directory - contains all generated projects
+output/

@@ -5,12 +5,14 @@ An intelligent coding agent that can understand high-level software development 
 ## 🚀 Features
 
 - **Voice Input**: Speak your project goals naturally using voice commands
+- **Request Confirmation**: Verify what Jarvis heard before proceeding
 - **Intelligent Planning**: AI-powered project breakdown into manageable tasks
 - **Human Approval**: Review and approve generated plans before execution
 - **Step-by-Step Execution**: Execute tasks with pause between each completion
 - **Real-time Feedback**: See agent thoughts, tool calls, and results in real-time
 - **Dependency Management**: Automatic task dependency resolution
 - **Progress Tracking**: Monitor completion status and upcoming tasks
+- **Application Instructions**: Automatic detection and instructions for running generated apps
 
 ## 📋 Prerequisites
 
@@ -124,7 +126,15 @@ python3 run.py
    - Example: "Create a Flask web application with user authentication"
    - If voice input fails, you'll be prompted to type your request
 
-3. **Review Generated Plan**
+3. **Confirm Your Request**
+   - Jarvis will repeat what it heard/read
+   - Review the request and choose:
+     - Type `y` or `yes` to proceed
+     - Type `n` or `no` to try again
+     - Type `c` or `cancel` to exit
+   - This prevents misunderstandings and gives you control
+
+4. **Review Generated Plan**
    - The AI will analyze your request and create a structured plan
    - Review the plan details including:
      - Project description
@@ -133,7 +143,7 @@ python3 run.py
      - Estimated timeline
    - Approve by typing `y` or reject with `n`
 
-4. **Execute Tasks**
+5. **Execute Tasks**
    - Tasks will execute one by one in dependency order
    - After each task completion, you'll see:
      - Task summary
@@ -142,9 +152,9 @@ python3 run.py
      - Next upcoming tasks
    - Press `Enter` to continue to the next task
 
-5. **Monitor Progress**
+6. **Monitor Progress**
    - Watch real-time agent thoughts and tool calls
-   - Review generated files in the `generated_project/` directory
+   - Review generated files in the `output/` directory
    - Track overall progress and remaining tasks
 
 ## 📁 Project Structure
@@ -160,7 +170,9 @@ coding_agent/
 │   └── tools/
 │       ├── file_system_tools.py # File operations
 │       └── voice_input.py   # Voice input handling
-├── generated_project/       # Output directory for created projects
+├── output/                  # Generated projects (ignored by Git)
+│   ├── README.md           # Output directory documentation
+│   └── [project-folders]/  # Each project in its own folder
 ├── venv/                   # Virtual environment
 └── README.md              # This file
 ```

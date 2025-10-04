@@ -1,8 +1,8 @@
 """
-File system tools for interacting with files and directories within the generated_project/ directory.
+File system tools for interacting with files and directories within the output/ directory.
 
 This module provides utility functions for reading, writing, and listing files
-within the generated project workspace, with proper error handling and path management.
+within the Jarvis output workspace, with proper error handling and path management.
 """
 
 import os
@@ -11,15 +11,15 @@ from pathlib import Path
 
 def read_file(path: str) -> str:
     """
-    Read the content of a file within the generated_project/ directory.
+    Read the content of a file within the output/ directory.
     
-    This function takes a relative path, joins it with the generated_project/ directory,
+    This function takes a relative path, joins it with the output/ directory,
     reads the file content, and returns it as a string. Includes error handling for
     FileNotFoundError and other potential file reading issues.
     
     Args:
-        path (str): Relative path to the file from the generated_project/ directory.
-                   Can include subdirectories (e.g., "src/main.py" or "config/settings.json").
+        path (str): Relative path to the file from the output/ directory.
+                   Can include subdirectories (e.g., "calculator/index.html" or "project/src/main.py").
     
     Returns:
         str: The content of the file as a string.
@@ -30,12 +30,12 @@ def read_file(path: str) -> str:
         UnicodeDecodeError: If the file contains invalid UTF-8 characters.
     
     Example:
-        >>> content = read_file("src/main.py")
+        >>> content = read_file("calculator/index.html")
         >>> print(content)
         # File content will be printed
     """
-    # Join the relative path with the generated_project directory
-    full_path = os.path.join("generated_project", path)
+    # Join the relative path with the output directory
+    full_path = os.path.join("output", path)
     
     try:
         with open(full_path, 'r', encoding='utf-8') as file:
@@ -53,15 +53,15 @@ def read_file(path: str) -> str:
 
 def write_file(path: str, content: str) -> str:
     """
-    Write content to a file within the generated_project/ directory.
+    Write content to a file within the output/ directory.
     
     This function takes a relative path and content, creates any necessary subdirectories,
-    writes the content to the file within the generated_project/ directory, and returns
+    writes the content to the file within the output/ directory, and returns
     a success message. Automatically creates parent directories if they don't exist.
     
     Args:
-        path (str): Relative path to the file from the generated_project/ directory.
-                   Can include subdirectories (e.g., "src/main.py" or "config/settings.json").
+        path (str): Relative path to the file from the output/ directory.
+                   Can include subdirectories (e.g., "calculator/index.html" or "project/src/main.py").
         content (str): The content to write to the file.
     
     Returns:
@@ -72,12 +72,12 @@ def write_file(path: str, content: str) -> str:
         OSError: If there are other filesystem-related errors.
     
     Example:
-        >>> result = write_file("src/main.py", "print('Hello, World!')")
+        >>> result = write_file("calculator/index.html", "<html>...</html>")
         >>> print(result)
-        "Successfully wrote to generated_project/src/main.py"
+        "Successfully wrote to output/calculator/index.html"
     """
-    # Join the relative path with the generated_project directory
-    full_path = os.path.join("generated_project", path)
+    # Join the relative path with the output directory
+    full_path = os.path.join("output", path)
     
     try:
         # Create parent directories if they don't exist
@@ -99,16 +99,16 @@ def write_file(path: str, content: str) -> str:
 
 def list_files(path: str = ".") -> str:
     """
-    List all files and directories within a given path inside generated_project/.
+    List all files and directories within a given path inside output/.
     
     This function lists all files and directories within the specified path inside
-    the generated_project/ directory and returns the list as a formatted string.
+    the output/ directory and returns the list as a formatted string.
     Shows both files and directories with clear indicators.
     
     Args:
-        path (str, optional): Relative path within generated_project/ to list.
-                            Defaults to "." (root of generated_project/).
-                            Can include subdirectories (e.g., "src" or "config").
+        path (str, optional): Relative path within output/ to list.
+                            Defaults to "." (root of output/).
+                            Can include subdirectories (e.g., "calculator" or "project/src").
     
     Returns:
         str: Formatted string listing all files and directories found.
@@ -121,14 +121,14 @@ def list_files(path: str = ".") -> str:
     Example:
         >>> files = list_files()
         >>> print(files)
-        # Lists all files and directories in generated_project/
+        # Lists all files and directories in output/
         
-        >>> files = list_files("src")
+        >>> files = list_files("calculator")
         >>> print(files)
-        # Lists all files and directories in generated_project/src/
+        # Lists all files and directories in output/calculator/
     """
-    # Join the relative path with the generated_project directory
-    full_path = os.path.join("generated_project", path)
+    # Join the relative path with the output directory
+    full_path = os.path.join("output", path)
     
     try:
         if not os.path.exists(full_path):

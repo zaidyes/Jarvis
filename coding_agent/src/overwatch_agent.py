@@ -50,29 +50,59 @@ class OverwatchAgent:
         
     def get_project_goal(self, use_voice: bool = True) -> str:
         """
-        Get the project goal from the user via voice or text input.
+        Get the project goal from the user via voice or text input with confirmation.
         
         Args:
             use_voice: Whether to attempt voice input first
             
         Returns:
-            The captured user request
+            The captured user request (or None if cancelled)
         """
-        if use_voice:
-            print("\n🎤 Capturing voice input...")
-            print("📝 Please speak your software development request clearly.")
+        while True:  # Loop until user confirms or cancels
+            user_request = None
             
-            try:
-                user_request = get_voice_command()
-                print(f"\n🎯 Captured request: '{user_request}'")
+            if use_voice:
+                print("\n🎤 Capturing voice input...")
+                print("📝 Please speak your software development request clearly.")
+                
+                try:
+                    user_request = get_voice_command()
+                    print(f"\n🎯 Captured request: '{user_request}'")
+                except Exception as e:
+                    print(f"❌ Error capturing voice input: {str(e)}")
+                    print("🔄 Falling back to text input...")
+                    use_voice = False  # Disable voice for this attempt
+            
+            if not user_request:
+                # Fallback to text input
+                user_request = input("Please enter your software development request: ")
+            
+            # Confirmation step
+            print("\n" + "="*60)
+            print("📋 REQUEST CONFIRMATION")
+            print("="*60)
+            print(f"🎯 Jarvis heard: '{user_request}'")
+            print("\nIs this correct?")
+            print("  • Type 'y' or 'yes' to proceed with this request")
+            print("  • Type 'n' or 'no' to try again")
+            print("  • Type 'c' or 'cancel' to exit")
+            
+            confirmation = input("\nYour choice (y/n/c): ").strip().lower()
+            
+            if confirmation in ['y', 'yes']:
+                print("✅ Request confirmed! Proceeding with project generation...")
                 return user_request
-            except Exception as e:
-                print(f"❌ Error capturing voice input: {str(e)}")
-                print("🔄 Falling back to text input...")
-        
-        # Fallback to text input
-        user_request = input("Please enter your software development request: ")
-        return user_request
+            elif confirmation in ['c', 'cancel']:
+                print("❌ Request cancelled by user.")
+                print("👋 Goodbye!")
+                return None
+            elif confirmation in ['n', 'no']:
+                print("🔄 Let's try again...")
+                print("="*60)
+                continue
+            else:
+                print("⚠️  Invalid choice. Please enter 'y' (yes), 'n' (no), or 'c' (cancel).")
+                continue
         
     async def generate_and_review_plan(self, user_request: str) -> bool:
         """
@@ -99,6 +129,8 @@ class OverwatchAgent:
             
             # Invoke the runner with the planner agent
             events = []
+            project_plan = None
+            
             async for event in self.runner.run_async(
                 user_id=self.user_id,
                 session_id=self.session_id,
@@ -106,21 +138,31 @@ class OverwatchAgent:
             ):
                 events.append(event)
                 print(f"📄 Event: {event}")
+                
+                # Extract plan from event content if available
+                if hasattr(event, 'content') and event.content:
+                    if hasattr(event.content, 'parts') and event.content.parts:
+                        for part in event.content.parts:
+                            if hasattr(part, 'text') and part.text:
+                                try:
+                                    # Try to parse the JSON plan from the text
+                                    import json
+                                    plan_text = part.text.strip()
+                                    if plan_text.startswith('{') and plan_text.endswith('}'):
+                                        project_plan = json.loads(plan_text)
+                                        print("✅ Plan extracted from event content!")
+                                        break
+                                except json.JSONDecodeError:
+                                    continue
             
             print("✅ Planner agent completed!")
             
-            # Get the updated session to check for results
-            updated_session = await self.session_service.get_session(
-                app_name=self.app_name,
-                user_id=self.user_id, 
-                session_id=self.session_id
-            )
-            
-            # Extract the project plan from the session state
-            project_plan = updated_session.state.get("project_plan")
-            
+            # If we found a plan in the events, use it
             if project_plan:
                 self.plan = project_plan
+                
+                # Store the plan in session state
+                await self.update_session_state({"project_plan": project_plan})
                 
                 print("\n🎉 Project plan generated successfully!")
                 self.display_project_plan(project_plan)
@@ -138,10 +180,37 @@ class OverwatchAgent:
                     print("❌ Plan not approved. Exiting...")
                     return False
             else:
-                print("❌ No project plan found in session state.")
-                print("🔍 Checking raw session state...")
-                print(f"Session state keys: {list(updated_session.state.keys())}")
-                return False
+                # Fallback: try to get from session state
+                updated_session = await self.session_service.get_session(
+                    app_name=self.app_name,
+                    user_id=self.user_id, 
+                    session_id=self.session_id
+                )
+                
+                project_plan = updated_session.state.get("project_plan")
+                
+                if project_plan:
+                    self.plan = project_plan
+                    print("\n🎉 Project plan found in session state!")
+                    self.display_project_plan(project_plan)
+                    
+                    # Ask for human approval
+                    print("\n" + "="*60)
+                    print("📋 PLAN APPROVAL REQUIRED")
+                    print("="*60)
+                    approval = input("Do you approve this plan? (y/n): ").strip().lower()
+                    
+                    if approval == 'y':
+                        print("✅ Plan approved! Proceeding to execution...")
+                        return True
+                    else:
+                        print("❌ Plan not approved. Exiting...")
+                        return False
+                else:
+                    print("❌ No project plan found in session state.")
+                    print("🔍 Checking raw session state...")
+                    print(f"Session state keys: {list(updated_session.state.keys())}")
+                    return False
                 
         except Exception as e:
             print(f"❌ Error running planner agent: {str(e)}")
@@ -288,9 +357,167 @@ class OverwatchAgent:
         print(f"\n🎉 All tasks completed successfully!")
         print(f"📊 Final progress: {len(self.completed_tasks)}/{total_tasks} tasks completed")
         
+        # Provide instructions on how to access and run the generated application
+        await self._provide_application_instructions()
+        
         # Update final session state
         await self.update_session_state({"status": "completed"})
         return True
+    
+    async def _provide_application_instructions(self):
+        """
+        Analyze the generated project and provide instructions on how to access and run it.
+        """
+        print("\n" + "="*70)
+        print("🚀 APPLICATION ACCESS INSTRUCTIONS")
+        print("="*70)
+        
+        try:
+            import os
+            from src.tools.file_system_tools import list_files
+            
+            # List all projects in the output directory
+            output_contents = list_files(".")
+            
+            if "Path does not exist" in output_contents or "Directory is empty" in output_contents:
+                print("⚠️  No projects found in output directory.")
+                print("💡 The application files may not have been created yet.")
+                return
+            
+            print("📁 Generated Projects:")
+            print(output_contents)
+            
+            # Try to detect the project type and provide specific instructions
+            project_type, project_folder = await self._detect_project_type()
+            
+            if project_type:
+                print(f"\n🎯 Detected Project Type: {project_type}")
+                print(f"📁 Project Folder: {project_folder}")
+                await self._provide_type_specific_instructions(project_type, project_folder)
+            else:
+                print("\n📋 General Instructions:")
+                await self._provide_general_instructions()
+                
+        except Exception as e:
+            print(f"❌ Error analyzing generated project: {str(e)}")
+            await self._provide_general_instructions()
+    
+    async def _detect_project_type(self):
+        """Detect the type of project based on generated files."""
+        try:
+            import os
+            from src.tools.file_system_tools import list_files
+            
+            # Get list of directories in output folder
+            output_contents = list_files(".")
+            directories = []
+            
+            for line in output_contents.split('\n'):
+                if '[DIR]' in line:
+                    dir_name = line.split('[DIR]')[1].strip().rstrip('/')
+                    if dir_name:  # Make sure it's not empty
+                        directories.append(dir_name)
+            
+            # Check each directory for project type indicators
+            for directory in directories:
+                try:
+                    contents = list_files(directory)
+                    
+                    # Check for web app files
+                    if "index.html" in contents or "index.htm" in contents:
+                        return "web_app", directory
+                    
+                    # Check for Python projects
+                    if any(f.endswith('.py') for f in contents.split('\n') if '[FILE]' in f):
+                        return "python_app", directory
+                    
+                    # Check for Node.js projects
+                    if "package.json" in contents:
+                        return "nodejs_app", directory
+                        
+                except:
+                    continue
+            
+            return None, None
+            
+        except Exception:
+            return None, None
+    
+    async def _provide_type_specific_instructions(self, project_type, project_folder):
+        """Provide instructions specific to the detected project type."""
+        
+        if project_type == "web_app":
+            print("\n🌐 Web Application Instructions:")
+            print("-" * 40)
+            print("📂 Your web application is ready!")
+            print(f"📁 Location: output/{project_folder}/")
+            print("\n🚀 How to run:")
+            print("   1. Open your web browser")
+            print(f"   2. Navigate to the project folder:")
+            print(f"      cd output/{project_folder}")
+            print("   3. Open index.html in your browser:")
+            print("      open index.html")
+            print("\n🔧 Alternative - Local Server:")
+            print(f"   1. Navigate to project folder:")
+            print(f"      cd output/{project_folder}")
+            print("   2. Start a local server:")
+            print("      python3 -m http.server 8000")
+            print("   3. Open in browser:")
+            print("      http://localhost:8000")
+            
+        elif project_type == "python_app":
+            print("\n🐍 Python Application Instructions:")
+            print("-" * 40)
+            print("📂 Your Python application is ready!")
+            print(f"📁 Location: output/{project_folder}/")
+            print("\n🚀 How to run:")
+            print(f"   1. Navigate to the project folder:")
+            print(f"      cd output/{project_folder}")
+            print("   2. Install dependencies (if any):")
+            print("      pip install -r requirements.txt")
+            print("   3. Run the application:")
+            print("      python3 main.py")
+            print("      # or")
+            print("      python3 app.py")
+            
+        elif project_type == "nodejs_app":
+            print("\n📦 Node.js Application Instructions:")
+            print("-" * 40)
+            print("📂 Your Node.js application is ready!")
+            print(f"📁 Location: output/{project_folder}/")
+            print("\n🚀 How to run:")
+            print(f"   1. Navigate to the project folder:")
+            print(f"      cd output/{project_folder}")
+            print("   2. Install dependencies:")
+            print("      npm install")
+            print("   3. Run the application:")
+            print("      npm start")
+            print("      # or")
+            print("      node index.js")
+            
+        else:
+            await self._provide_general_instructions()
+    
+    async def _provide_general_instructions(self):
+        """Provide general instructions for accessing generated projects."""
+        print("\n📋 General Instructions:")
+        print("-" * 40)
+        print("📂 Your application has been generated!")
+        print("\n🚀 How to access:")
+        print("   1. Navigate to the output directory:")
+        print("      cd output/")
+        print("   2. Look for your project folder")
+        print("   3. Check the files in the project folder")
+        print("   4. Look for README files or main entry points")
+        print("\n💡 Common entry points:")
+        print("   • index.html (web applications)")
+        print("   • main.py, app.py (Python applications)")
+        print("   • package.json (Node.js applications)")
+        print("   • README.md (project documentation)")
+        
+        print("\n" + "="*70)
+        print("🎉 Your application is ready to use!")
+        print("="*70)
         
     async def start_project(self, use_voice: bool = True) -> bool:
         """
@@ -318,6 +545,10 @@ class OverwatchAgent:
             print("\n📋 Step 1: Getting Project Goal")
             print("-" * 40)
             user_request = self.get_project_goal(use_voice=use_voice)
+            
+            if user_request is None:
+                print("❌ Request cancelled by user. Exiting.")
+                return False
             
             if not user_request.strip():
                 print("❌ No request provided. Exiting.")

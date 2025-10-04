@@ -34,6 +34,8 @@ async def main():
         if success:
             print("\n🎉 Project completed successfully!")
             print("✅ All tasks have been executed and the project is ready.")
+            print("\n📋 Application instructions have been provided above.")
+            print("💡 Follow the instructions to access and run your generated application.")
         else:
             print("\n❌ Project execution encountered errors.")
             print("💡 Please review the output above for details.")

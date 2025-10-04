@@ -70,6 +70,6 @@ executor_agent = LlmAgent(
     - Performance optimization
     - Security best practices
     """,
-    model="gemini-1.5-pro",
+    model="gemini-2.5-flash",
     tools=[read_file, write_file, list_files]
 )
