@@ -266,8 +266,6 @@ class OverwatchAgent:
                         print(f"   - {task_id}: Missing dependencies: {missing_deps}")
                     print("\n💡 Please review the task dependencies and fix circular references.")
                     return False
-            else:
-                break
         
             # Execute the first available task
             current_task = executable_tasks[0]
